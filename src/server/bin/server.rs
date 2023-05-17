@@ -1,18 +1,25 @@
 use std::{
     net::{TcpListener, TcpStream},
-    io::{prelude::*}
+    io::{prelude::*}, thread
 };
 use colored::Colorize;
 
 fn main() -> std::io::Result<()> {
-    // We want our server to listen on the local ip, port 2345. Same as the original program.
-    let listener = TcpListener::bind("127.0.0.1:2345")?;
-    // Alternatively...
-    // let listener = TcpListener::bind("127.0.0.1:2345").unwrap();
+    let listener = TcpListener::bind("127.0.0.1:2345").expect("Failed to bind.");
+
+    let mut thread_vec: Vec<thread::JoinHandle<()>> = Vec::new();
 
     for stream in listener.incoming() {
-        // handle the stream.
-        handle(&stream?)?;
+        let stream = stream.expect("Connection failed.");
+        let handle = thread::spawn(move || {
+            handle(&stream).unwrap_or_else(|error| eprintln!("{:?}", error));
+        });
+
+        thread_vec.push(handle);
+    }
+
+    for handle in thread_vec {
+        handle.join().unwrap();
     }
 
     Ok(())
